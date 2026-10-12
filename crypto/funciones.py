@@ -15,6 +15,8 @@ CLAVES_PRIVADAS = os.path.join(BASE_DIR, "claves", "privadas")
 CLAVES_PUBLICAS = os.path.join(BASE_DIR, "claves", "publicas")
 PAQUETES_DIR = os.path.join(BASE_DIR, "paquetes")
 
+BITACORA_FILE = os.path.join(BASE_DIR, "bitacora.log")
+
 
 def crear_directorios():
     """Crea los directorios necesarios para almacenar las claves y paquetes."""
@@ -532,3 +534,49 @@ def descifrar(
         raise ValueError(
             "No se pudo verificar o descifrar el paquete."
         )
+
+# ==========================================
+# RF7: SISTEMA DE BITÁCORA DE AUDITORÍA
+# ==========================================
+
+def registrar_bitacora(operacion: str, usuario: str, archivo: str) -> None:
+    """RF7: Registra un evento en la bitácora encadenada."""
+    hash_previo = "0" * 64  # Hash inicial por defecto si está vacía
+    
+    if os.path.exists(BITACORA_FILE):
+        with open(BITACORA_FILE, "rb") as f:
+            lineas = f.readlines()
+            if lineas:
+                ultima_linea = lineas[-1]
+                hash_previo = hashlib.sha256(ultima_linea).hexdigest()
+                
+    registro = {
+        "fecha": datetime.now(timezone.utc).isoformat(),
+        "operacion": operacion,
+        "usuario": usuario,
+        "archivo": archivo,
+        "hash_previo": hash_previo
+    }
+    
+    linea_str = json.dumps(registro, sort_keys=True) + "\n"
+    
+    with open(BITACORA_FILE, "a", encoding="utf-8") as f:
+        f.write(linea_str)
+
+def auditar_bitacora() -> tuple:
+    """RF7: Audita la cadena de hashes de la bitácora."""
+    if not os.path.exists(BITACORA_FILE):
+        return True, "No hay bitácora para auditar."
+        
+    with open(BITACORA_FILE, "rb") as f:
+        lineas = f.readlines()
+        
+    hash_esperado = "0" * 64
+    for i, linea_bytes in enumerate(lineas, start=1):
+        registro = json.loads(linea_bytes.decode("utf-8"))
+        if registro["hash_previo"] != hash_esperado:
+            return False, f"¡ALTERACIÓN DETECTADA! La línea {i} fue modificada. La cadena está rota."
+        
+        hash_esperado = hashlib.sha256(linea_bytes).hexdigest()
+        
+    return True, f"La bitácora está íntegra. Se auditaron {len(lineas)} registros."

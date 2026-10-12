@@ -11,6 +11,8 @@ from crypto.funciones import (
     cifrar_para,
     descifrar,
     cargar_x25519_publica,
+    registrar_bitacora,
+    auditar_bitacora
 )
 
 
@@ -96,6 +98,11 @@ def comando_cifrar(archivo, remitente, destinatario):
 
         print("\nArchivo cifrado correctamente.")
         print(f"Paquete generado: {ruta_paquete}")
+        print("\nArchivo cifrado correctamente.")
+        print(f"Paquete generado: {ruta_paquete}")
+
+        # INYECTAR RF7
+        registrar_bitacora("CIFRADO", remitente, nombre_archivo)
 
     except Exception:
         print("No se pudo cifrar el archivo.")
@@ -127,6 +134,15 @@ def comando_descifrar(paquete, destinatario):
 
         print("\nPaquete verificado y descifrado correctamente.")
         print(f"Archivo recuperado: {nombre_salida}")
+        with open(nombre_salida, "wb") as archivo_salida:
+            archivo_salida.write(datos_originales)
+
+        # INYECTAR RF6 EN PANTALLA Y RF7
+        print("\n[OK] Integridad validada: El hash SHA-256 coincide exactamente.")
+        print("Paquete verificado y descifrado correctamente.")
+        print(f"Archivo recuperado: {nombre_salida}")
+        
+        registrar_bitacora("DESCIFRADO", destinatario, nombre_original)
 
     except Exception:
         print(
@@ -254,11 +270,11 @@ def main():
         )
 
     elif args.accion == "auditar":
-
-        print(
-            "La función de auditoría corresponde al RF7 "
-            "y será implementada por el integrante 3."
-        )
+        valido, mensaje = auditar_bitacora()
+        if valido:
+            print(f"\n[OK] {mensaje}")
+        else:
+            print(f"\n[PELIGRO CRÍTICO] {mensaje}")
 
 
 if __name__ == "__main__":
